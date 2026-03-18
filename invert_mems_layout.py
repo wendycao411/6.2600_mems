@@ -60,7 +60,7 @@ def build_source_layout():
 def invert_layout(source, border=200, output_layer=MASK_LAYER):
     """
     Create a one-layer inverted mask by subtracting the design geometry from
-    a background rectangle. Visualization outlines on layer 11 are excluded.
+    a background rectangle.
     """
     mask_source = pg.extract(source, layers=[1, 2, 3])
     xmin, ymin = mask_source.xmin, mask_source.ymin
