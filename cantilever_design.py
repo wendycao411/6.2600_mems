@@ -32,6 +32,20 @@ def make_contact_block(size, layer=2):
     return block
 
 
+def cantilever_total_width(mc, beam_length):
+    """Return the full horizontal span of the cantilever geometry."""
+    right_extension = mc.electrode_tip_overhang + (
+        mc.electrode_contact_width - mc.electrode_stem_width
+    ) / 2
+    return mc.anchor_width + beam_length + right_extension
+
+
+def cantilever_reference_beam_xmax(mc, beam_length):
+    """Keep the cantilever tip at the reference location for a given beam length."""
+    anchor_x = (mc.unit_width - cantilever_total_width(mc, beam_length)) / 2
+    return anchor_x + mc.anchor_width + beam_length
+
+
 def make_electrode_structure(mc, beam, is_top):
     """Create one sketch-style electrode: contact block, stem, and wide finger."""
     electrode = Device("electrode_structure")
@@ -135,21 +149,24 @@ def build_parameter_object():
     mc.edge_margin = 150
 
     mc.beam_center_y = mc.unit_height / 2
-    mc.anchor_x = mc.edge_margin
     mc.anchor_width = 250
     mc.anchor_height = 250
     mc.beam_length = 500
     mc.beam_width = 10
     mc.beam_gap = 3
-    mc.anchor_y = mc.beam_center_y - mc.anchor_height / 2
 
-    mc.electrode_contact_width = 260
-    mc.electrode_contact_height = 220
+    mc.electrode_contact_width = 250
+    mc.electrode_contact_height = 250
     mc.electrode_stem_width = 20
     mc.electrode_stem_length = 180
     mc.electrode_finger_height = 90
     mc.electrode_start_offset = 30
     mc.electrode_tip_overhang = 15
+
+    mc.reference_beam_length = 500
+    mc.fixed_beam_xmax = cantilever_reference_beam_xmax(mc, mc.reference_beam_length)
+    mc.anchor_x = mc.fixed_beam_xmax - mc.beam_length - mc.anchor_width
+    mc.anchor_y = mc.beam_center_y - mc.anchor_height / 2
 
     mc.label_size = 65
     mc.label_x = mc.edge_margin + 20

@@ -47,11 +47,15 @@ def make_center_electrode(mc, beam_ref, gap, is_top):
     """Create one centered electrode with a wide active region, thin stem, and contact."""
     electrode = Device("center_electrode")
 
-    active_length = min(
+    max_active_length = beam_ref.xsize - 2 * mc.anchor_clearance
+    if max_active_length <= 0:
+        raise ValueError("Beam is too short for the requested anchor clearance")
+
+    target_active_length = min(
         mc.electrode_coverage_fraction * beam_ref.xsize,
         beam_ref.xsize + mc.electrode_tip_overhang,
     )
-    active_length = max(active_length, mc.min_electrode_length)
+    active_length = min(target_active_length, max_active_length)
 
     active_x = beam_ref.center[0] - active_length / 2
     stem_x = beam_ref.center[0] - mc.stem_width / 2
@@ -122,17 +126,17 @@ def build_parameter_object():
     mc.center_x = mc.unit_width / 2
     mc.draw_outline = True
 
-    mc.anchor_width = 180
-    mc.anchor_height = 220
+    mc.anchor_width = 250
+    mc.anchor_height = 250
 
-    mc.contact_width = 240
-    mc.contact_height = 180
+    mc.contact_width = 250
+    mc.contact_height = 250
     mc.stem_width = 20
     mc.stem_length = 140
     mc.active_electrode_height = 80
     mc.electrode_coverage_fraction = 0.9
     mc.electrode_tip_overhang = 15
-    mc.min_electrode_length = 180
+    mc.anchor_clearance = 25
 
     mc.label_size = 55
     mc.label_x = 120
