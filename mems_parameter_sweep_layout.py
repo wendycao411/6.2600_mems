@@ -27,6 +27,17 @@ def make_contact_block(size, layer=2):
     return block
 
 
+def make_alignment_cross(arm_length, arm_width, layer=2):
+    cross = Device("alignment_cross")
+    cross << pg.rectangle(size=(arm_length, arm_width), layer=layer).move(
+        (-arm_length / 2, -arm_width / 2)
+    )
+    cross << pg.rectangle(size=(arm_width, arm_length), layer=layer).move(
+        (-arm_width / 2, -arm_length / 2)
+    )
+    return cross
+
+
 def make_fillet_pieces(f_r, layer=1):
     """Create the four inside-corner fillet pieces from the provided template."""
     D1 = pg.circle(radius=f_r, layer=layer).move([f_r, f_r])
@@ -281,6 +292,82 @@ def place_parameter_grid(parent, origin, lengths, widths, gaps, cell_fn, section
     parent << section.move(origin)
 
 
+def place_section_crosses(parent, origin, ncols, nrows, unit_width, unit_height, mc):
+    """Place alignment crosses in the gaps between neighboring cells."""
+    gap_x = mc.cell_pitch_x - unit_width
+    gap_y = mc.cell_pitch_y - unit_height
+    if gap_x <= 0 or gap_y <= 0:
+        return
+
+    cross = make_alignment_cross(mc.cross_arm_length, mc.cross_arm_width, layer=mc.cross_layer)
+    base_x = origin[0] + mc.grid_origin_x
+    base_y = origin[1] + mc.grid_origin_y
+
+    for col in range(ncols - 1):
+        cross_x = base_x + (col + 1) * mc.cell_pitch_x - gap_x / 2
+        for row in range(nrows - 1):
+            cross_y = base_y + (row + 1) * mc.cell_pitch_y - gap_y / 2
+            cross_ref = parent << cross
+            cross_ref.move((cross_x, cross_y))
+
+
+def make_reference_section(mc):
+    """Create PHIDL lithography reference structures matching the older solar workflow."""
+    section = Device("reference_section")
+
+    title = section << pg.text(
+        text="Lithography References",
+        size=mc.section_label_size,
+        layer=3,
+        font="Arial",
+    )
+    title.move((0, mc.ref_title_y))
+
+    steps_l1 = section << pg.litho_steps(
+        line_widths=mc.ref_line_widths,
+        line_spacing=mc.ref_line_spacing,
+        height=mc.ref_steps_height,
+        layer=1,
+    )
+    steps_l1.move((mc.ref_struct_x, mc.ref_steps_y1))
+
+    steps_l2 = section << pg.litho_steps(
+        line_widths=mc.ref_line_widths,
+        line_spacing=mc.ref_line_spacing,
+        height=mc.ref_steps_height,
+        layer=2,
+    )
+    steps_l2.move((mc.ref_struct_x, mc.ref_steps_y2))
+
+    cal_h = section << pg.litho_calipers(
+        notch_size=mc.ref_caliper_notch_size,
+        notch_spacing=mc.ref_caliper_notch_spacing,
+        num_notches=mc.ref_caliper_num_notches,
+        offset_per_notch=mc.ref_caliper_offset_per_notch,
+        row_spacing=0,
+        layer1=1,
+        layer2=2,
+    )
+    cal_h.move((mc.ref_struct_x, mc.ref_caliper_y1))
+
+    cal_v = section << pg.litho_calipers(
+        notch_size=mc.ref_caliper_notch_size,
+        notch_spacing=mc.ref_caliper_notch_spacing,
+        num_notches=mc.ref_caliper_num_notches,
+        offset_per_notch=mc.ref_caliper_offset_per_notch,
+        row_spacing=0,
+        layer1=1,
+        layer2=2,
+    )
+    cal_v.rotate(90).move((mc.ref_struct_x, mc.ref_caliper_y2))
+    return section
+
+
+def place_reference_section(parent, origin, mc):
+    """Place PHIDL lithography reference structures matching the older solar workflow."""
+    parent << make_reference_section(mc).move(origin)
+
+
 def build_parameter_object():
     mc = EmptyClass()
 
@@ -305,6 +392,9 @@ def build_parameter_object():
 
     mc.family_gap_x = 1200
     mc.master_margin = 200
+    mc.cross_arm_length = 140
+    mc.cross_arm_width = 12
+    mc.cross_layer = 2
 
     mc.cant_unit_width = 1500
     mc.cant_unit_height = 1500
@@ -361,6 +451,24 @@ def build_parameter_object():
         - mc.cc_contact_width / 2
     )
 
+    mc.ref_section_gap_y = 1200
+    mc.ref_title_y = 1850
+    mc.ref_struct_x = 900
+    mc.ref_steps_y1 = 1200
+    mc.ref_steps_y2 = 700
+    mc.ref_caliper_y1 = 250
+    mc.ref_caliper_y2 = -250
+    mc.ref_label_x = 0
+    mc.ref_label_dy = 120
+    mc.ref_label_size = 60
+    mc.ref_line_widths = [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30]
+    mc.ref_line_spacing = 20
+    mc.ref_steps_height = 500
+    mc.ref_caliper_notch_size = [2, 10]
+    mc.ref_caliper_notch_spacing = 4
+    mc.ref_caliper_num_notches = 20
+    mc.ref_caliper_offset_per_notch = 0.1
+
     mc.output_gds = "mems_parameter_sweep_layout.gds"
     return mc
 
@@ -402,6 +510,15 @@ def main():
         "cantilever_section",
         mc,
     )
+    place_section_crosses(
+        master,
+        cant_origin,
+        len(mc.lengths),
+        len(mc.widths) * len(mc.gaps),
+        mc.cant_unit_width,
+        mc.cant_unit_height,
+        mc,
+    )
     place_parameter_grid(
         master,
         cc_origin,
@@ -412,6 +529,19 @@ def main():
         "clamped_clamped_section",
         mc,
     )
+    place_section_crosses(
+        master,
+        cc_origin,
+        len(mc.lengths),
+        len(mc.widths) * len(mc.gaps),
+        mc.cc_unit_width,
+        mc.cc_unit_height,
+        mc,
+    )
+
+    section_height = mc.grid_origin_y + (row_count - 1) * mc.cell_pitch_y + mc.cant_unit_height
+    ref_origin = (mc.master_margin, cant_origin[1] + section_height + mc.ref_section_gap_y)
+    place_reference_section(master, ref_origin, mc)
 
     master.write_gds(mc.output_gds)
     print(f"Wrote {mc.output_gds}")
