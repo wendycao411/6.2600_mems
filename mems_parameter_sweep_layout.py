@@ -293,20 +293,23 @@ def place_parameter_grid(parent, origin, lengths, widths, gaps, cell_fn, section
 
 
 def place_section_crosses(parent, origin, ncols, nrows, unit_width, unit_height, mc):
-    """Place alignment crosses in the gaps between neighboring cells."""
     gap_x = mc.cell_pitch_x - unit_width
     gap_y = mc.cell_pitch_y - unit_height
-    if gap_x <= 0 or gap_y <= 0:
-        return
 
     cross = make_alignment_cross(mc.cross_arm_length, mc.cross_arm_width, layer=mc.cross_layer)
+
+    # Starting point of the first cell's bottom-left corner
     base_x = origin[0] + mc.grid_origin_x
     base_y = origin[1] + mc.grid_origin_y
 
     for col in range(ncols - 1):
-        cross_x = base_x + (col + 1) * mc.cell_pitch_x - gap_x / 2
+        # Center of gap = (Right edge of cell) + (Half of gap)
+        cross_x = base_x + (col * mc.cell_pitch_x) + unit_width + (gap_x / 2)
+
         for row in range(nrows - 1):
-            cross_y = base_y + (row + 1) * mc.cell_pitch_y - gap_y / 2
+            # Center of gap = (Top edge of cell) + (Half of gap)
+            cross_y = base_y + (row * mc.cell_pitch_y) + unit_height + (gap_y / 2)
+
             cross_ref = parent << cross
             cross_ref.move((cross_x, cross_y))
 
