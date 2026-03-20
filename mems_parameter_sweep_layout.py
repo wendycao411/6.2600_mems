@@ -27,6 +27,36 @@ def make_contact_block(size, layer=2):
     return block
 
 
+def make_fillet_pieces(f_r, layer=1):
+    """Create the four inside-corner fillet pieces from the provided template."""
+    D1 = pg.circle(radius=f_r, layer=layer).move([f_r, f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer)
+    F_tr = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, 0])
+    F_tl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_tl.move([-2 * f_r, 0])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, f_r])
+    F_bl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_bl.move([-2 * f_r, -2 * f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([0, f_r])
+    F_br = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_br.move([0, -2 * f_r])
+
+    return {"tr": F_tr, "tl": F_tl, "bl": F_bl, "br": F_br}
+
+
 def cantilever_total_width(mc, beam_length):
     right_extension = mc.cant_electrode_tip_overhang + (
         mc.cant_contact_width - mc.cant_stem_width_max
@@ -100,6 +130,11 @@ def cantilever_cell(mc, L, W, gap):
 
     beam = cell << pg.rectangle(size=(L, W), layer=1)
     beam.move((anchor_x + mc.cant_anchor_width, beam_y))
+
+    junction_x = anchor_x + mc.cant_anchor_width
+    fillets = make_fillet_pieces(mc.cant_fillet_radius, layer=1)
+    cell << fillets["tr"].move((junction_x, beam_y + W))
+    cell << fillets["br"].move((junction_x, beam_y))
 
     cell << make_cantilever_electrode(mc, beam, gap=gap, is_top=True)
     cell << make_cantilever_electrode(mc, beam, gap=gap, is_top=False)
@@ -186,6 +221,13 @@ def clamped_clamped_cell(mc, L, W, gap):
     cell << make_cc_anchor(mc).move((left_anchor_x, anchor_y))
     beam = cell << pg.rectangle(size=(L, W), layer=1)
     beam.move((left_anchor_x + mc.cc_anchor_width, beam_y))
+    fillets = make_fillet_pieces(mc.cc_fillet_radius, layer=1)
+    left_jx = left_anchor_x + mc.cc_anchor_width
+    right_jx = right_anchor_x
+    cell << fillets["tr"].move((left_jx, beam_y + W))
+    cell << fillets["br"].move((left_jx, beam_y))
+    cell << fillets["tl"].move((right_jx, beam_y + W))
+    cell << fillets["bl"].move((right_jx, beam_y))
     cell << make_cc_anchor(mc).move((right_anchor_x, anchor_y))
 
     cell << make_cc_electrode(mc, beam, gap=gap, is_top=True)
@@ -243,7 +285,7 @@ def build_parameter_object():
     mc = EmptyClass()
 
     mc.lengths = [100, 200, 300, 400, 500]
-    mc.widths = [10, 15, 20]
+    mc.widths = [3, 4, 5]
     mc.gaps = [2, 3, 5]
 
     mc.cell_label_size = 42
@@ -273,9 +315,10 @@ def build_parameter_object():
     mc.cant_contact_height = 250
     mc.cant_stem_width_max = 60
     mc.cant_stem_length = 180
-    mc.cant_electrode_height = 90
+    mc.cant_electrode_height = 10
     mc.cant_electrode_start_offset = 30
     mc.cant_electrode_tip_overhang = 15
+    mc.cant_fillet_radius = 5
     mc.cant_reference_beam_length = 500
     mc.cant_fixed_beam_xmax = cantilever_reference_beam_xmax(
         mc, mc.cant_reference_beam_length
@@ -304,10 +347,11 @@ def build_parameter_object():
     mc.cc_contact_height = 250
     mc.cc_stem_width_max = 60
     mc.cc_stem_length = 140
-    mc.cc_electrode_height = 80
+    mc.cc_electrode_height = 10
     mc.cc_electrode_coverage_fraction = 0.9
     mc.cc_electrode_tip_overhang = 15
     mc.cc_anchor_clearance = 25
+    mc.cc_fillet_radius = 5
     mc.cc_reference_beam_length = 100
     mc.cc_fixed_left_anchor_x = cc_reference_left_anchor_x(
         mc, mc.cc_reference_beam_length

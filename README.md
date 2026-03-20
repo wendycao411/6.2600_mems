@@ -49,11 +49,11 @@ Current reference parameters in `cantilever_design.py`:
 - unit cell: `1500 x 1500 um`
 - border margin check: `150 um`
 - anchor: `250 x 250 um`
-- default single-cell beam: `L=500 um`, `W=10 um`, `G=3 um`
+- default single-cell beam: `L=500 um`, `W=3 um`, `G=3 um`
 - contact pads: `250 x 250 um`
 - stem width: fixed at `60 um`
 - stem length: `180 um`
-- electrode finger height: `90 um` ?
+- electrode finger height: `10 um`
 - electrode start offset from beam start: `30 um`
 - electrode tip overhang: `15 um`
 
@@ -81,11 +81,11 @@ Current reference parameters in `clamped_clamped_cell.py`:
 - contact pads: `250 x 250 um`
 - stem width cap: `60 um`
 - stem length: `140 um`
-- active electrode height: `80 um`
+- active electrode height: `10 um`
 - electrode coverage fraction: `0.9`
 - electrode tip overhang: `15 um`
 - anchor clearance: `25 um`
-- default single-cell beam: `L=300 um`, `W=10 um`, `G=3 um`
+- default single-cell beam: `L=300 um`, `W=3 um`, `G=3 um`
 
 Placement rules:
 
@@ -105,7 +105,7 @@ Placement rules:
 Each section includes all combinations of:
 
 - beam length: `[100, 200, 300, 400, 500] um`
-- beam width: `[10, 15, 20] um`
+- beam width: `[3, 4, 5] um`
 - gap: `[2, 3, 5] um`
 
 That is:
@@ -117,15 +117,15 @@ Grid organization:
 
 - columns correspond to beam length
 - rows correspond to `(W, G)` combinations in this order:
-  - `W=10, G=2`
-  - `W=10, G=3`
-  - `W=10, G=5`
-  - `W=15, G=2`
-  - `W=15, G=3`
-  - `W=15, G=5`
-  - `W=20, G=2`
-  - `W=20, G=3`
-  - `W=20, G=5`
+  - `W=3, G=2`
+  - `W=3, G=3`
+  - `W=3, G=5`
+  - `W=4, G=2`
+  - `W=4, G=3`
+  - `W=4, G=5`
+  - `W=5, G=2`
+  - `W=5, G=3`
+  - `W=5, G=5`
 
 Layout spacing is intentionally generous for inspection in KLayout rather than compact chip packing.
 

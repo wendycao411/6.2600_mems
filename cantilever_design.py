@@ -32,6 +32,36 @@ def make_contact_block(size, layer=2):
     return block
 
 
+def make_fillet_pieces(f_r, layer=1):
+    """Create the four inside-corner fillet pieces from the provided template."""
+    D1 = pg.circle(radius=f_r, layer=layer).move([f_r, f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer)
+    F_tr = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, 0])
+    F_tl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_tl.move([-2 * f_r, 0])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, f_r])
+    F_bl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_bl.move([-2 * f_r, -2 * f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([0, f_r])
+    F_br = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_br.move([0, -2 * f_r])
+
+    return {"tr": F_tr, "tl": F_tl, "bl": F_bl, "br": F_br}
+
+
 def cantilever_total_width(mc, beam_length):
     """Return the full horizontal span of the cantilever geometry."""
     right_extension = mc.electrode_tip_overhang + (
@@ -122,6 +152,11 @@ def cantilever_core(mc):
     beam = core << pg.rectangle(size=(mc.beam_length, mc.beam_width), layer=1)
     beam.move((mc.anchor_x + mc.anchor_width, beam_y))
 
+    junction_x = mc.anchor_x + mc.anchor_width
+    fillets = make_fillet_pieces(mc.fillet_radius, layer=1)
+    core << fillets["tr"].move((junction_x, beam_y + mc.beam_width))
+    core << fillets["br"].move((junction_x, beam_y))
+
     core << make_electrode_structure(mc, beam, is_top=True)
     core << make_electrode_structure(mc, beam, is_top=False)
 
@@ -155,16 +190,17 @@ def build_parameter_object():
     mc.anchor_width = 250
     mc.anchor_height = 250
     mc.beam_length = 500
-    mc.beam_width = 10
+    mc.beam_width = 3
     mc.beam_gap = 3
 
     mc.electrode_contact_width = 250
     mc.electrode_contact_height = 250
     mc.electrode_stem_width_max = 60
     mc.electrode_stem_length = 180
-    mc.electrode_finger_height = 90
+    mc.electrode_finger_height = 10
     mc.electrode_start_offset = 30
     mc.electrode_tip_overhang = 15
+    mc.fillet_radius = 5
 
     mc.reference_beam_length = 500
     mc.fixed_beam_xmax = cantilever_reference_beam_xmax(mc, mc.reference_beam_length)

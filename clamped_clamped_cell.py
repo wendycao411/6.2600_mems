@@ -15,6 +15,36 @@ class EmptyClass:
     pass
 
 
+def make_fillet_pieces(f_r, layer=1):
+    """Create the four inside-corner fillet pieces from the provided template."""
+    D1 = pg.circle(radius=f_r, layer=layer).move([f_r, f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer)
+    F_tr = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, 0])
+    F_tl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_tl.move([-2 * f_r, 0])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([f_r, f_r])
+    F_bl = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_bl.move([-2 * f_r, -2 * f_r])
+
+    D2 = pg.rectangle(size=[f_r, f_r], layer=layer).move([0, f_r])
+    F_br = pg.boolean(
+        A=D2, B=D1, operation="not", precision=1e-6, num_divisions=[1, 1], layer=layer
+    )
+    F_br.move([0, -2 * f_r])
+
+    return {"tr": F_tr, "tl": F_tl, "bl": F_bl, "br": F_br}
+
+
 def reference_left_anchor_x(mc, beam_length):
     return mc.center_x - (beam_length / 2 + mc.anchor_width)
 
@@ -115,6 +145,15 @@ def clamped_clamped_cell(mc, L, W, gap):
     beam = cell << make_beam(mc, L, W)
     beam.move((left_anchor_x + mc.anchor_width, beam_y))
 
+    fillets = make_fillet_pieces(mc.fillet_radius, layer=1)
+    left_jx = left_anchor_x + mc.anchor_width
+    right_jx = right_anchor_x
+
+    cell << fillets["tr"].move((left_jx, beam_y + W))
+    cell << fillets["br"].move((left_jx, beam_y))
+    cell << fillets["tl"].move((right_jx, beam_y + W))
+    cell << fillets["bl"].move((right_jx, beam_y))
+
     right_anchor = cell << make_anchor(mc)
     right_anchor.move((right_anchor_x, anchor_y))
 
@@ -147,10 +186,11 @@ def build_parameter_object():
     mc.contact_height = 250
     mc.stem_width_max = 60
     mc.stem_length = 140
-    mc.active_electrode_height = 80
+    mc.active_electrode_height = 10
     mc.electrode_coverage_fraction = 0.9
     mc.electrode_tip_overhang = 15
     mc.anchor_clearance = 25
+    mc.fillet_radius = 5
     mc.reference_beam_length = 100
     mc.fixed_left_anchor_x = reference_left_anchor_x(mc, mc.reference_beam_length)
     mc.fixed_contact_x = (
@@ -169,7 +209,7 @@ def build_parameter_object():
 
 def main():
     mc = build_parameter_object()
-    cell = clamped_clamped_cell(mc, L=300, W=10, gap=3)
+    cell = clamped_clamped_cell(mc, L=300, W=3, gap=3)
     cell.write_gds(mc.output_gds)
     print(f"Wrote {mc.output_gds}")
 
