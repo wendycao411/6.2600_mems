@@ -1,5 +1,7 @@
 from phidl import Device
 import phidl.geometry as pg
+import numpy as np
+import csv
 
 
 ##########################################
@@ -9,12 +11,63 @@ import phidl.geometry as pg
 # 3 = text labels
 # 11 = visualization outlines
 ##########################################
-
+density = 2329 #kg/m^3 (SOI wafer)
+youngs_modulus = 169*10**9 #Pa (SOI, 110 plane because shearing motion...)
 
 class EmptyClass:
+
     pass
 
+def capacitance(beam_length, beam_width, distance, permittivity=8.854e-12):
+    """Calculate the capacitance of a parallel plate capacitor."""
+    area = beam_length * beam_width
+    return permittivity * area / distance
 
+def force_at_DC_voltage(beam_length, beam_width, distance, voltage, permittivity=8.854e-12):
+    """Calculate the electrostatic force at a given DC voltage."""
+    C = capacitance(beam_length, beam_width, distance, permittivity)
+    return 0.5 * C * voltage**2 / distance
+def maximum_cantilever_deflection(beam_length, beam_width, beam_thickness, applied_force, youngs_modulus):
+    """Calculate the maximum deflection of a cantilever beam under an applied force."""
+    I = (beam_width * beam_thickness**3) / 12
+    return (applied_force * beam_length**3) / (3 * youngs_modulus * I)
+def clamped_resonant_frequency(beam_length, beam_width, beam_thickness, material_density, youngs_modulus):
+    """Calculate the fundamental resonant frequency of a clamped-clamped beam."""
+    # For a clamped-clamped beam, the first mode shape has a frequency given by:
+    # f = (1/2L) * sqrt((E * I) / (rho * A))
+    # where:
+    # L = beam length
+    # E = Young's modulus
+    # I = moment of inertia of the cross-section
+    # rho = material density
+    # A = cross-sectional area
+
+    A = beam_width * beam_thickness
+    I = (beam_width * beam_thickness**3) / 12
+
+    frequency = 1 / (2 * np.pi) * 3.5156 / beam_length**2 * np.sqrt(
+        (youngs_modulus * I) / (material_density * A)
+    )
+    return frequency
+
+def clamped_clamped_resonant_frequency(beam_length, beam_width, beam_thickness, material_density, youngs_modulus):
+    """Calculate the fundamental resonant frequency of a clamped-clamped beam."""
+    # For a clamped-clamped beam, the first mode shape has a frequency given by:
+    # f = (1/2L) * sqrt((E * I) / (rho * A))
+    # where:
+    # L = beam length
+    # E = Young's modulus
+    # I = moment of inertia of the cross-section
+    # rho = material density
+    # A = cross-sectional area
+
+    A = beam_width * beam_thickness
+    I = (beam_width * beam_thickness**3) / 12
+
+    frequency = 1 / (2 * np.pi) * 22.373 / beam_length**2 * np.sqrt(
+        (youngs_modulus * I) / (material_density * A)
+    )
+    return frequency
 def outline(width, height, layer=11):
     frame = Device("outline")
     frame << pg.rectangle(size=(width, height), layer=layer)
@@ -284,6 +337,7 @@ def place_parameter_grid(parent, origin, lengths, widths, gaps, cell_fn, section
         )
         row_label.move((mc.row_label_x, row_y + mc.row_label_y_offset))
 
+
         for col, L in enumerate(lengths):
             cell = cell_fn(mc, L, W, G)
             cell_ref = section << cell
@@ -376,7 +430,8 @@ def build_parameter_object():
 
     mc.lengths = [100, 200, 300, 400, 500]
     mc.widths = [3, 4, 5]
-    mc.gaps = [2, 3, 5]
+    mc.gaps = [1, 2, 3]
+    mc.beam_thickness = 1  # microns
 
     mc.cell_label_size = 42
     mc.cell_label_x = 80
@@ -548,6 +603,56 @@ def main():
 
     master.write_gds(mc.output_gds)
     print(f"Wrote {mc.output_gds}")
+
+    # Calculate resonant frequencies and write to CSV
+    csv_filename = "device_frequencies.csv"
+    with open(csv_filename, 'w', newline='') as csvfile:
+        fieldnames = ['type', 'length_um', 'width_um', 'gap_um', 'thickness_um', 'frequency_hz', 'capacitance_fF', 'force_pN', 'max_deflection_nm']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        # Convert to meters for calculation
+        thickness_m = mc.beam_thickness * 1e-6
+
+        for L in mc.lengths:
+            L_m = L * 1e-6
+            for W in mc.widths:
+                W_m = W * 1e-6
+                for G in mc.gaps:
+                    # Cantilever frequency
+                    cant_freq = clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
+                    cap = capacitance(L_m, W_m, G * 1e-6)
+                    force = force_at_DC_voltage(L_m, W_m, G * 1e-6, voltage=100)
+                    maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)  # Example voltage
+                    writer.writerow({
+                        'type': 'cantilever',
+                        'length_um': L,
+                        'width_um': W,
+                        'gap_um': G,
+                        'thickness_um': mc.beam_thickness,
+                        'frequency_hz': cant_freq,
+                        "capacitance_fF": cap * 1e15,
+                        "force_pN": force * 1e12,
+                        "max_deflection_nm": maximum_deflection * 1e9
+                    })
+
+                    # Clamped-clamped frequency
+                    cc_freq = clamped_clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
+                    maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)
+                    writer.writerow({
+                        'type': 'clamped_clamped',
+                        'length_um': L,
+                        'width_um': W,
+                        'gap_um': G,
+                        'thickness_um': mc.beam_thickness,
+                        'frequency_hz': cc_freq,
+                        "capacitance_fF": cap * 1e15,
+                        "force_pN": force * 1e12,
+                        "max_deflection_nm": maximum_deflection * 1e9
+
+                    })
+
+    print(f"Wrote {csv_filename}")
 
 
 if __name__ == "__main__":
