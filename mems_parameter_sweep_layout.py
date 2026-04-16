@@ -614,45 +614,45 @@ def main():
         # Convert to meters for calculation
         thickness_m = mc.beam_thickness * 1e-6
 
-    #     for L in mc.lengths:
-    #         L_m = L * 1e-6
-    #         for W in mc.widths:
-    #             W_m = W * 1e-6
-    #             for G in mc.gaps:
-    #                 # Cantilever frequency
-    #                 cant_freq = clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
-    #                 cap = capacitance(L_m, W_m, G * 1e-6)
-    #                 force = force_at_DC_voltage(L_m, W_m, G * 1e-6, voltage=100)
-    #                 maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)  # Example voltage
-    #                 writer.writerow({
-    #                     'type': 'cantilever',
-    #                     'length_um': L,
-    #                     'width_um': W,
-    #                     'gap_um': G,
-    #                     'thickness_um': mc.beam_thickness,
-    #                     'frequency_hz': cant_freq,
-    #                     "capacitance_fF": cap * 1e15,
-    #                     "force_pN": force * 1e12,
-    #                     "max_deflection_nm": maximum_deflection * 1e9
-    #                 })
+        for L in mc.lengths:
+            L_m = L * 1e-6
+            for W in mc.widths:
+                W_m = W * 1e-6
+                for G in mc.gaps:
+                    # Cantilever frequency
+                    cant_freq = clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
+                    cap = capacitance(L_m, W_m, G * 1e-6)
+                    force = force_at_DC_voltage(L_m, W_m, G * 1e-6, voltage=100)
+                    maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)  # Example voltage
+                    writer.writerow({
+                        'type': 'cantilever',
+                        'length_um': L,
+                        'width_um': W,
+                        'gap_um': G,
+                        'thickness_um': mc.beam_thickness,
+                        'frequency_hz': cant_freq,
+                        "capacitance_fF": cap * 1e15,
+                        "force_pN": force * 1e12,
+                        "max_deflection_nm": maximum_deflection * 1e9
+                    })
 
-    #                 # Clamped-clamped frequency
-    #                 cc_freq = clamped_clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
-    #                 maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)
-    #                 writer.writerow({
-    #                     'type': 'clamped_clamped',
-    #                     'length_um': L,
-    #                     'width_um': W,
-    #                     'gap_um': G,
-    #                     'thickness_um': mc.beam_thickness,
-    #                     'frequency_hz': cc_freq,
-    #                     "capacitance_fF": cap * 1e15,
-    #                     "force_pN": force * 1e12,
-    #                     "max_deflection_nm": maximum_deflection * 1e9
+                    # Clamped-clamped frequency
+                    cc_freq = clamped_clamped_resonant_frequency(L_m, W_m, thickness_m, density, youngs_modulus)
+                    maximum_deflection = maximum_cantilever_deflection(L_m, W_m, thickness_m, force, youngs_modulus)
+                    writer.writerow({
+                        'type': 'clamped_clamped',
+                        'length_um': L,
+                        'width_um': W,
+                        'gap_um': G,
+                        'thickness_um': mc.beam_thickness,
+                        'frequency_hz': cc_freq,
+                        "capacitance_fF": cap * 1e15,
+                        "force_pN": force * 1e12,
+                        "max_deflection_nm": maximum_deflection * 1e9
 
-    #                 })
+                    })
 
-    # print(f"Wrote {csv_filename}")
+    print(f"Wrote {csv_filename}")
 
 
 if __name__ == "__main__":
